@@ -1,0 +1,11 @@
+# filepath: /c:/Users/HP/Desktop/Windows applications/Task-Management/.gitignore
+*.pyc
+__pycache__/
+db.sqlite3
+.env
+.vscode/
+.idea/
+*.log
+.venv/
+.venv
+# End of .gitignore
