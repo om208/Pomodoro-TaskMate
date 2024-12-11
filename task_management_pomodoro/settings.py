@@ -37,8 +37,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'management',
     'rest_framework',
-    'task',
+    'rest_framework_simplejwt',
+    'rest_framework.authtoken',
+    # 'task',
 ]
 
 MIDDLEWARE = [
@@ -49,7 +52,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'task.middleware.ErrorHandlingMiddleware',
+    # 'task.middleware.ErrorHandlingMiddleware',
 ]
 
 ROOT_URLCONF = 'task_management_pomodoro.urls'
@@ -134,3 +137,6 @@ REST_FRAMEWORK = {
         'rest_framework.permissions.IsAuthenticated',
     ],
 }
+
+
+AUTH_USER_MODEL = 'management.User'

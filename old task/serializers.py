@@ -1,19 +1,25 @@
 from rest_framework import serializers
 from .models import User, Task, PomodoroSession, Settings, Notification
+from django.utils import timezone
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'email', 'google_oauth_token', 'github_oauth_token']
+        fields = ['id', 'username', 'email', 'google_oauth_token', 'github_oauth_token', 'password']
 
 class TaskSerializer(serializers.ModelSerializer):
+    entry_date = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = Task
-        fields = '__all__'
+        fields = '__all__'  # Or li  st all fields explicitly
 
     def validate(self, data):
-        if data['task_deadline'] <= data['entry_date']:
-            raise serializers.ValidationError("Task deadline must be greater than created_on.")
+        task_deadline = data.get('task_deadline')
+        # Use current time as entry_date
+        entry_date = data.get('entry_date', timezone.now())
+        if task_deadline and task_deadline < entry_date:
+            raise serializers.ValidationError("Task deadline cannot be before the entry date.")
         return data
 
 class PomodoroSessionSerializer(serializers.ModelSerializer):
