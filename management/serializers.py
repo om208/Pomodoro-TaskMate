@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from .models import User
 from .models.task import Task
+from .models.user_settings import Settings
 from django.contrib.auth.password_validation import validate_password
 
 class UserSerializer(serializers.ModelSerializer):
@@ -41,3 +42,8 @@ class TaskSerializer(serializers.ModelSerializer):
         model = Task
         fields = '__all__'
         # read_only_fields = ('id', 'created_on', 'completed_on', 'initial_deadline')
+
+class SettingsSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Settings
+        fields = ['user', 'goal', 'alarm_tune', 'progress_status']

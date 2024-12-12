@@ -10,6 +10,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models.task import Task
 from rest_framework import serializers
 from django.shortcuts import get_object_or_404
+from .models.pomodoro_session import PomodoroSession
+from datetime import datetime
+from .models.user_settings import Settings
+from django.contrib.auth.models import User
+from .serializers import SettingsSerializer
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 def AdditionalTestingView(request):
     return HttpResponse("Welcome to the Management App Index Page.")
@@ -51,48 +59,6 @@ class OAuthView(APIView):
         # OAuth implementation would go here
         # For now, return a placeholder response
         return Response({"message": "OAuth authentication not implemented yet."}, status=status.HTTP_501_NOT_IMPLEMENTED)
-
-# class TaskSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = Task
-#         fields = '__all__'
-#         read_only_fields = ('id', 'created_on', 'completed_on', 'initial_deadline')
-
-# class TaskViewSet(viewsets.ViewSet):
-#     def list(self, request):
-#         user_id = request.query_params.get('userId')
-#         if not user_id:
-#             return Response(
-#                 {"error": "userId is required"}, 
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-        
-#         tasks = Task.objects.filter(user_id=user_id)
-#         serializer = TaskSerializer(tasks, many=True)
-#         return Response({"tasks": serializer.data})
-
-#     def create(self, request):
-#         serializer = TaskSerializer(data=request.data)
-#         if serializer.is_valid():
-#             task = serializer.save()
-#             return Response({
-#                 "success": True,
-#                 "task_id": task.id
-#             })
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def update(self, request, pk=None):
-#         task = get_object_or_404(Task, pk=pk)
-#         serializer = TaskSerializer(task, data=request.data, partial=True)
-#         if serializer.is_valid():
-#             serializer.save()
-#             return Response({"success": True})
-#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-#     def destroy(self, request, pk=None):
-#         task = get_object_or_404(Task, pk=pk)
-#         task.delete()
-#         return Response({"success": True})
 
 class TaskListView(APIView):
     permission_classes = [AllowAny]
@@ -142,3 +108,112 @@ class TaskDeleteView(APIView):
         task = get_object_or_404(Task, pk=task_id)
         task.delete()
         return Response({'success': True})
+
+class StartPomodoroSessionView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        task_id = request.data.get('task_id')
+        task = get_object_or_404(Task, pk=task_id)
+        session = PomodoroSession.objects.create(task=task)
+        return Response({
+            "session_id": session.id,
+            "start_time": session.start_time
+        }, status=status.HTTP_201_CREATED)
+
+class StopPomodoroSessionView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        session_id = request.data.get('session_id')
+        session = get_object_or_404(PomodoroSession, pk=session_id)
+        session.end_time = datetime.now()
+        end_time = session.end_time
+        start_time = PomodoroSession.objects.values_list('start_time', flat=True).get(pk=session_id)
+        
+        start_time_epoch = int(start_time.timestamp())
+        end_time_epoch = int(end_time.timestamp())
+        difference_in_minutes = (end_time_epoch - start_time_epoch) / 60
+        session.save()
+        return Response({
+            "success": True,
+            "duration": difference_in_minutes
+        }, status=status.HTTP_200_OK)
+
+class GetSettings(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user_id = request.query_params.get('userId')
+        settings = Settings.objects.filter(user__id=user_id).first()
+        if settings:
+            return Response({
+                "goal": settings.goal,
+                "alarm_tune": settings.alarm_tune,
+                "progress_status": settings.progress_status
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Settings not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class UpdateSettings(generics.GenericAPIView):
+    serializer_class = SettingsSerializer
+    permission_classes = [AllowAny]
+
+    def put(self, request):
+        user_id = request.data.get('user')
+        goal = request.data.get('goal')
+        alarm_tune = request.data.get('alarm_tune')
+        progress_status = request.data.get('progress_status')
+
+        settings = Settings.objects.filter(user__id=user_id).first()
+        if settings:
+            settings.goal = goal
+            settings.alarm_tune = alarm_tune
+            settings.progress_status = progress_status
+            settings.save()
+            return Response({"success": True}, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Settings not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class GetProgressStatus(generics.GenericAPIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        user_id = request.query_params.get('userId')
+        settings = Settings.objects.filter(user__id=user_id).first()
+        if settings:
+            return Response({
+                "progress_status": settings.progress_status
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Settings not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class CreateSettingsView(generics.CreateAPIView):
+    serializer_class = SettingsSerializer
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        user_id = request.data.get('user')
+        goal = request.data.get('goal', 'Data Engineering')
+        alarm_tune = request.data.get('alarm_tune')
+        progress_status = request.data.get('progress_status')
+
+        try:
+            user = User.objects.get(id=user_id)
+            settings = Settings.objects.create(
+                user=user,
+                goal=goal,
+                alarm_tune=alarm_tune,
+                progress_status=progress_status
+            )
+            return Response({
+                "success": True,
+                "settings": {
+                    "user": settings.user.id,
+                    "goal": settings.goal,
+                    "alarm_tune": settings.alarm_tune,
+                    "progress_status": settings.progress_status
+                }
+            }, status=status.HTTP_201_CREATED)
+        except User.DoesNotExist:
+            return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
