@@ -16,9 +16,14 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
+from .views import api_documentation  # Import the new view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    # path('', include('task.urls')),  # Include the app's URLs
     path('api/', include('management.urls')),
+    path('', api_documentation, name='api_documentation'),  # Add the new URL pattern
 ]
+
+urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

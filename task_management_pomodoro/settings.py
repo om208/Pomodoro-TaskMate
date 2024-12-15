@@ -10,11 +10,12 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 
+import os
 from pathlib import Path
+from decouple import config
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Base directory of the project
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
@@ -25,8 +26,7 @@ SECRET_KEY = 'django-insecure-9vg=9)69#2h646iq*a3-2n^wq)&)z53!a%(*8@huig2#5g_4b8
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app',]
-
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '.vercel.app']
 
 # Application definition
 
@@ -62,7 +62,7 @@ ROOT_URLCONF = 'task_management_pomodoro.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'templates'],  # Ensure this points to the templates directory
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -83,8 +83,15 @@ WSGI_APPLICATION = 'task_management_pomodoro.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('DATABASE_NAME'),
+        'USER': config('DATABASE_USER'),
+        'PASSWORD': config('DATABASE_PASSWORD'),
+        'HOST': config('DATABASE_HOST'),
+        'PORT': config('DATABASE_PORT', default=3306),
+        # 'OPTIONS': {
+        #     'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        # },
     }
 }
 
@@ -123,10 +130,15 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 
-# Default primary key field type
-# https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# Ensure the directory exists
+if not os.path.exists(STATICFILES_DIRS[0]):
+    os.makedirs(STATICFILES_DIRS[0])
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
